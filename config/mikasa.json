@@ -1,0 +1,17 @@
+{
+  "voice": "Leda",
+  "voice_picked": false,
+  "voice_mode": "studio",
+  "language": "Hindi and English mixed, the way people here actually talk",
+  "city": "Agra",
+  "tz": "Asia/Kolkata",
+  "fullscreen": false,
+  "fullscreen_picked": true,
+  "camera": "ask",
+  "alarm": true,
+  "her_writing": "on",
+  "code_on": false,
+  "code_salt": "",
+  "code_hash": "",
+  "first_night": true
+}
