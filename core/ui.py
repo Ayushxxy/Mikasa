@@ -30,10 +30,12 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLineEdit, QFrame, QDialog, QCheckBox,
                              QComboBox, QPlainTextEdit, QMessageBox)
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 import settings
 import shelf as shelf_mod
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 # Qt reads an eight-digit colour as #AARRGGBB, so "#E0A2A866" is olive at 88%
 # alpha, not rose at 40%. Anything translucent is written as rgba() instead.
@@ -720,6 +722,26 @@ class SettingsDialog(QDialog):
         # dialog. None of it worked well enough to keep and all of it made her
         # look like a security product, so it is gone rather than hidden. The
         # whole feature comes back as its own thing, or not at all.
+        # ── api key ─────────────────────────────────────────────────────────
+        lay.addWidget(self._head("API KEY"))
+        krow = QHBoxLayout()
+        self.lbl_key = QLabel(self._key_label())
+        self.lbl_key.setStyleSheet(
+            f"color:{ROSE if self._has_key() else DIM};")
+        krow.addWidget(self.lbl_key, 1)
+        b_open_key = QPushButton("get free key")
+        b_open_key.clicked.connect(self._open_key_page)
+        krow.addWidget(b_open_key)
+        b_key = QPushButton("change" if self._has_key() else "set")
+        b_key.clicked.connect(self._set_api_key)
+        krow.addWidget(b_key)
+        lay.addLayout(krow)
+        knote = QLabel("stored locally in config/api_keys.json — never leaves "
+                       "your laptop except to connect to Gemini.")
+        knote.setWordWrap(True)
+        knote.setStyleSheet(f"color:{DIM}; font-size:10px;")
+        lay.addWidget(knote)
+
         # ── code ────────────────────────────────────────────────────────────
         lay.addWidget(self._head("CODE"))
         crow = QHBoxLayout()
@@ -944,6 +966,75 @@ class SettingsDialog(QDialog):
         settings.save(cfg)
         self.win.reload_settings()
         self.accept()
+
+    def _has_key(self) -> bool:
+        try:
+            import live
+            return bool(live.find_api_key())
+        except Exception:
+            return False
+
+    def _key_label(self) -> str:
+        try:
+            import live
+            k = live.find_api_key()
+            if k:
+                return f"{k[:6]}…{k[-4:]}" if len(k) > 12 else "set"
+        except Exception:
+            pass
+        return "none set"
+
+    def _open_key_page(self):
+        import webbrowser
+        try:
+            webbrowser.open("https://aistudio.google.com/apikey")
+        except Exception:
+            pass
+
+    def _set_api_key(self):
+        import json
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+        from PyQt6.QtWidgets import QInputDialog
+        new, ok = QInputDialog.getText(
+            self, "Gemini API Key",
+            "Paste your free Google AI Studio key (starts with AIza...):",
+            QLineEdit.EchoMode.Normal)
+        if not ok:
+            return
+        k = (new or "").strip().strip("'\"")
+        if not k or len(k) < 20:
+            QMessageBox.warning(self, "API Key", "That does not look like a valid Gemini API key.")
+            return
+        # Live ping against Google Gemini so bad keys are caught immediately
+        url = ("https://generativelanguage.googleapis.com/v1beta/models?pageSize=2&key="
+               + urllib.parse.quote(k, safe=""))
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mikasa/4.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                if resp.status != 200:
+                    raise RuntimeError(f"HTTP {resp.status}")
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 401, 403):
+                QMessageBox.warning(
+                    self, "Invalid API Key",
+                    "Google rejected this key. Copy a fresh key from aistudio.google.com/apikey.")
+                return
+        except Exception:
+            pass  # offline right now — still save locally
+
+        cfg_dir = ROOT / "config"
+        cfg_dir.mkdir(parents=True, exist_ok=True)
+        (cfg_dir / "api_keys.json").write_text(
+            json.dumps({"gemini_api_key": k}, indent=2) + "\n",
+            encoding="utf-8")
+        self.lbl_key.setText(self._key_label())
+        self.lbl_key.setStyleSheet(f"color:{ROSE};")
+        try:
+            self.win.reload_api_key()
+        except Exception:
+            pass
 
     def _set_code(self):
         from PyQt6.QtWidgets import QInputDialog
@@ -1347,6 +1438,10 @@ class Window(QMainWindow):
         self.cfg = settings.load()
         if self.controller:
             self.controller.reload_settings()
+
+    def reload_api_key(self):
+        if self.controller and hasattr(self.controller, "reload_api_key"):
+            self.controller.reload_api_key()
 
     def close_room(self):
         if self.controller:

@@ -30,6 +30,7 @@ SKIP = "skipped"
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -195,7 +196,7 @@ def _prompt():
         import re as _re
         assert not _re.search(r"\b\d\d:\d\d\b", p.split("[TIME IS THE MAIN")[1].split("[")[0]), \
             "an hour is frozen into the time section again"
-        assert "{now}" not in (ROOT / "prompt.txt").read_text(encoding="utf-8"), \
+        assert "{now}" not in (ROOT / "core" / "prompt.txt").read_text(encoding="utf-8"), \
             "the launch-time token is back"
         assert "get_time" in p, "she is told to check the clock but has no way to"
 
@@ -282,7 +283,7 @@ def _window():
     assert ui.BONE.lower() == "#e7e1da"
 
     # no notice on the controls screen
-    src = (ROOT / "ui.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     assert "she cannot see this screen" not in src.lower(), \
         "the controls panel still carries a disclaimer"
     return "types to her, clears, black + three colours, no disclaimer"
@@ -318,7 +319,7 @@ def _independent():
     # her own source may not name the other program at all
     for f in ("app.py", "live.py", "ui.py", "settings.py", "memory.py",
               "shelf.py", "hear_her.py"):
-        src = (ROOT / f).read_text(encoding="utf-8")
+        src = ((ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else ROOT / f))))))))))))).read_text(encoding="utf-8")
         code = "\n".join(l.split("#")[0] for l in src.splitlines())
         assert "mark-lv-core" not in code, f"{f} still reaches into ULTRON"
         for hit in re.findall(r"(?:subprocess|Popen).{0,80}p(main|resence)", code):
@@ -330,26 +331,29 @@ def _independent():
     # in it, and the one he hands to a friend, where the key is deliberately
     # blank so setup.py can ask for it. This check used to fail the second
     # build — a shipped zip reported a broken test for being shipped correctly.
+    # The key file may be blank or not created yet on a fresh clone (setup.py
+    # creates config/api_keys.json on first run so git never tracks a real key).
     import json
     keys = ROOT / "config" / "api_keys.json"
-    assert keys.exists(), "there is no key file in her folder — the zip will not run"
-    k = str(json.loads(keys.read_text()).get("gemini_api_key", "")).strip()
-    if k:
-        assert len(k) >= 20, "the key in her folder is too short to be a key"
-        return f"standalone, with her own key ({k[:6]}…)"
-    return "standalone, key blank — setup.py will ask for one"
+    k = ""
+    if keys.exists():
+        k = str(json.loads(keys.read_text(encoding="utf-8")).get("gemini_api_key", "")).strip()
+        if k:
+            assert len(k) >= 20, "the key in her folder is too short to be a key"
 
     # and the way out is her own window closing
-    src = (ROOT / "ui.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     assert 'QPushButton("CLOSE")' in src, "the way out is still labelled as a return"
     assert "return_to_ultron" not in src, "the old door is still wired"
 
     # the prompt never refers to the other program either
-    p = (ROOT / "prompt.txt").read_text(encoding="utf-8").lower()
+    p = (ROOT / "core" / "prompt.txt").read_text(encoding="utf-8").lower()
     assert "ultron" not in p, "her prompt mentions him"
     assert "never speak a code" in p and "never mention one" in p, \
         "the door rules are not in her prompt"
-    return "no path to him, key in her folder, CLOSE, prompt clean"
+    if k:
+        return f"standalone, with her own key ({k[:6]}…)"
+    return "standalone, key blank — setup.py will ask for one"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -360,7 +364,7 @@ def _threads():
     import live
 
     # Code only — the comment above the fix quotes the old call on purpose.
-    src = "\n".join(l for l in (ROOT / "live.py").read_text(encoding="utf-8").split("\n")
+    src = "\n".join(l for l in (ROOT / "core" / "live.py").read_text(encoding="utf-8").split("\n")
                      if not l.strip().startswith("#"))
     assert "asyncio.get_event_loop()" not in src, \
         "a worker thread is still being asked for its event loop"
@@ -431,7 +435,7 @@ def _direct_launch():
             f"preflight refused without saying how to fix it: {verdict!r}"
 
     # and the entry point is app.py, runnable on its own
-    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
     assert '__name__ == "__main__"' in src
     assert "def main() -> int" in src
     return "bat has no silent paths, errors are recorded, entry point is app.py"
@@ -519,7 +523,7 @@ def _faces():
     assert p._mood == "angry", "a bad mood moved her face anyway"
 
     # no pulse: nothing about her face moves on its own any more
-    src = (ROOT / "ui.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     portrait = src[src.index("class Portrait"):src.index("class Wave")]
     assert "beat" not in portrait and "_phase" not in portrait, \
         "the heart-beat is still in the portrait"
@@ -530,7 +534,7 @@ def _faces():
     assert not (ROOT / "assets" / "face.png").exists(), \
         "the photograph is still shipped"
     for f in ("app.py", "ui.py"):
-        src2 = (ROOT / f).read_text(encoding="utf-8")
+        src2 = ((ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else ROOT / f))))))))))))).read_text(encoding="utf-8")
         assert "face.png" not in src2, f"{f} still loads the photograph"
     return f"12 faces, 352px, centred, {total // 1024} KB, no pulse"
 
@@ -691,7 +695,7 @@ def _reconnect():
         "a connection line was drawn as somebody speaking"
 
     # the line she says when she comes back points at her own last sentence
-    a = (ROOT / "app.py").read_text(encoding="utf-8")
+    a = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
     start = a.index("def _on_back")
     body = a[start:a.index("def _set_mood", start)]
     assert "_last_said" in body, "she comes back with nothing to come back to"
@@ -707,7 +711,7 @@ def _heart():
     size = (ROOT / "assets" / "heart.png").stat().st_size
     assert size < 40_000, f"the heart is {size / 1024:.0f} KB for a 22 px mark"
 
-    src = (ROOT / "ui.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     portrait = src[src.index("class Portrait"):src.index("class Wave")]
     code = "\n".join(l.split("#")[0] for l in portrait.splitlines())
     assert "heart" not in code.lower(), \
@@ -726,7 +730,7 @@ def _heart():
 # ─────────────────────────────────────────────────────────────────────────────
 @check("the prompt keeps her the same person, and no colour is half-written")
 def _constancy():
-    text = (ROOT / "prompt.txt").read_text(encoding="utf-8")
+    text = (ROOT / "core" / "prompt.txt").read_text(encoding="utf-8")
     assert "[SHE IS THE SAME PERSON EVERY TIME]" in text, \
         "the constancy section is gone — the next update will drift"
     body = text[text.index("[SHE IS THE SAME PERSON EVERY TIME]"):]
@@ -738,12 +742,12 @@ def _constancy():
     # Qt reads #RRGGBBAA as #AARRGGBB: a trailing alpha turns rose into olive
     import re
     for f in ("ui.py",):
-        src = (ROOT / f).read_text(encoding="utf-8")
+        src = ((ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else (ROOT / "core" / f if (ROOT / "core" / f).exists() else ROOT / f))))))))))))).read_text(encoding="utf-8")
         bad = re.findall(r"#?\{[A-Z]+\}[0-9A-Fa-f]{2}\b", src)
         assert not bad, f"{f} still writes eight-digit colours: {bad[:3]}"
 
     # the probe exists and is not run by accident
-    h = (ROOT / "hear_her.py").read_text(encoding="utf-8")
+    h = (ROOT / "core" / "hear_her.py").read_text(encoding="utf-8")
     assert "--probe" in h and "PROBE_TURNS" in h, "there is no drift probe"
     assert "add_argument(\"--probe\"" in h and "action=\"store_true\"" in h
     return "constancy section, face in the prompt, no #RRGGBBAA, probe behind a flag"

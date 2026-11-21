@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -45,7 +46,7 @@ def _prompt() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 @check("the prompt has no clock frozen in it, and every token is filled")
 def _tokens():
-    raw = (ROOT / "prompt.txt").read_text(encoding="utf-8")
+    raw = (ROOT / "core" / "prompt.txt").read_text(encoding="utf-8")
     for dead in ("{now}", "{day_name}"):
         assert dead not in raw, (
             f"{dead} is back in prompt.txt — that is the token that was filled "
@@ -73,13 +74,13 @@ def _clock():
     assert stamp.startswith(local.strftime("%H:%M")), (stamp, local)
 
     # ...and it must move. A stamp that cannot change is the bug.
-    src = (ROOT / "app.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
     assert "def _clock_watch" in src, "nothing refreshes her clock during a session"
     assert "note_clock" in src, "the clock is never handed to the session"
     assert "def _push_clock" in src and "send_text" in src.split("def say_typed")[1], \
         "a typed line does not refresh the clock first"
 
-    live_src = (ROOT / "live.py").read_text(encoding="utf-8")
+    live_src = (ROOT / "core" / "live.py").read_text(encoding="utf-8")
     assert "def note_clock" in live_src
     assert "turn_complete=False" in live_src, \
         "the clock arrives as a turn — she would answer the clock"
@@ -240,14 +241,14 @@ def _voices():
     assert settings._voice_of({"voice_picked": True}) == "Leda"
 
     # the picker offers the three, and saves the name and not the label
-    ui = (ROOT / "ui.py").read_text(encoding="utf-8")
+    ui = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     assert "currentData()" in ui, \
         "the picker saves currentText — a label would be saved as a voice name"
     assert "settings.VOICES" in ui and "VOICE_MORE" not in ui.split("# ── helpers")[0]
     assert 'cfg["voice_picked"] = True' in ui, "saving does not mark the choice"
 
     # and there is still a way to hear them
-    hh = (ROOT / "hear_her.py").read_text(encoding="utf-8")
+    hh = (ROOT / "core" / "hear_her.py").read_text(encoding="utf-8")
     assert "--voices" in hh and "AUDITION_LINES" in hh, "no audition mode"
     return f"{len(settings.VOICES)} voices, default {settings.DEFAULTS['voice']}"
 
@@ -344,14 +345,14 @@ def _voice_live():
     asyncio.run(scenario())
 
     # the window has to actually ask for it on save
-    app_src = (ROOT / "app.py").read_text(encoding="utf-8")
+    app_src = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
     assert "set_voice" in app_src, "saving a voice never reaches the session"
     return "one planned handover, no backoff, no line lost, same conversation"
 
 
 @check("she hears the tone of the room, not only the words")
 def _affective():
-    src = (ROOT / "live.py").read_text(encoding="utf-8")
+    src = (ROOT / "core" / "live.py").read_text(encoding="utf-8")
     assert "enable_affective_dialog" in src, \
         "affective dialog is off — a tired voice reads as a neutral sentence"
     assert "dataclasses.fields" in src, \

@@ -25,11 +25,15 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import settings
 import memory
 import shelf as shelf_mod
 
-ROOT = Path(__file__).resolve().parent
+CORE = Path(__file__).resolve().parent
+ROOT = CORE.parent
 LOCK = ROOT / "config" / "mikasa.lock"
 
 SEND_RATE = 16000
@@ -153,7 +157,8 @@ def _now(cfg: dict):
 
 
 def build_prompt(cfg: dict) -> str:
-    raw = (ROOT / "prompt.txt").read_text(encoding="utf-8")
+    pfile = (CORE / "prompt.txt") if (CORE / "prompt.txt").exists() else (ROOT / "prompt.txt")
+    raw = pfile.read_text(encoding="utf-8")
 
     # (there was a `now` here, computed once and pasted into the prompt — the
     # frozen clock. The live one arrives per turn; see Mikasa._stamp_now.)
@@ -1148,6 +1153,21 @@ class Mikasa:
                     self.win.note.emit(f"her voice is {now}  {self._stamp()}")
             except Exception as e:
                 print(f"[Mikasa] voice change failed: {type(e).__name__}: {e}")
+
+    def reload_api_key(self):
+        import live
+        new_key = live.find_api_key()
+        if not new_key:
+            return
+        if getattr(self, "voice", None) is not None:
+            self.voice.api_key = new_key
+            self.voice._client = None
+        if self.session is not None:
+            try:
+                self.session.reconnect_now("api key updated")
+                self.win.note.emit(f"api key updated  {self._stamp()}")
+            except Exception as e:
+                print(f"[Mikasa] key reload failed: {type(e).__name__}: {e}")
 
     # ── out ─────────────────────────────────────────────────────────────────
     def _release_audio(self):

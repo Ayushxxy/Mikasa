@@ -378,7 +378,7 @@ def demo(api_key: str = "", voice: str = "Leda", mood: str = "") -> int:
         try:
             import json
             api_key = json.loads(
-                (Path(__file__).resolve().parent / "config" /
+                (Path(__file__).resolve().parent.parent / "config" /
                  "api_keys.json").read_text(encoding="utf-8")
             ).get("gemini_api_key", "").strip()
         except Exception:
@@ -387,7 +387,7 @@ def demo(api_key: str = "", voice: str = "Leda", mood: str = "") -> int:
         print("koi key nahi mili — config/api_keys.json me gemini_api_key daal do")
         return 2
 
-    out = Path(__file__).resolve().parent / "config" / "voice-demo"
+    out = Path(__file__).resolve().parent.parent / "config" / "voice-demo"
     out.mkdir(parents=True, exist_ok=True)
     mouth = Voice(api_key=api_key, sink=lambda _b: None, voice=voice)
     picks = [d for d in DEMO if not mood or d[0] == mood]
