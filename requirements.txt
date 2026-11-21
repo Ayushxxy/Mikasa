@@ -1,0 +1,14 @@
+# Mikasa — what she needs to run.
+#
+# Four packages, pinned the way she was tested. Installed into her own .venv by
+# setup.py, so nothing here touches the rest of the machine.
+#
+#   PyQt6          her window, her face, her settings
+#   numpy          audio maths
+#   sounddevice    microphone and speaker
+#   google-genai   Gemini Live — the part that lets her talk
+
+PyQt6>=6.6,<7
+sounddevice>=0.4,<1
+numpy>=1.24,<3
+google-genai>=2.8.0,<3
