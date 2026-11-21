@@ -1,23 +1,26 @@
-# Never committed, never shipped — personal keys, memory, runtime logs & cache.
+# Personal keys, memories & runtime state — NEVER commit
+config/
 .venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
+*.log
+*.lock
 
-# Secrets & personal runtime state
-config/api_keys.json
-config/mikasa.json
-config/last_prompt.txt
-config/netlog.json
-config/memory/
-config/frames/
-config/voice-demo/
-config/auditions/
-config/seen
-config/mikasa.lock
-config/mikasa-error.txt
-
-# Local helper files generated at install time
-START-HERE.txt
+# Setup helper scratch files
 PASTE-KEY-HERE.txt
 key.txt
+START-HERE.txt
+.setup-write-test
+
+# User notes on her shelf (keep empty folder markers)
+shelf/*
+!shelf/.khaali
+!shelf/uski/
+shelf/uski/*
+!shelf/uski/.khaali
+
+# OS junk
+.DS_Store
+Thumbs.db

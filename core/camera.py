@@ -36,7 +36,7 @@ import threading
 import time
 from pathlib import Path
 
-ROOT   = Path(__file__).resolve().parent
+ROOT   = Path(__file__).resolve().parent.parent
 FRAMES = ROOT / "config" / "frames"
 
 WARMUP_S  = 0.35     # let the sensor settle before anything is saved

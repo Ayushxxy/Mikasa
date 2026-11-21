@@ -5,9 +5,10 @@ cd /d "%~dp0"
 title Mikasa
 
 rem ==========================================================================
-rem   Mikasa - Direct Launcher
-rem   If packages or API key are missing, offers to launch INSTALL.bat right
-rem   here so a new user never hits a dead window.
+rem   Mikasa - One-File Launcher & First-Time Setup
+rem   - First run (missing .venv, packages, or API key): opens Guided Setup.
+rem   - Every launch after: opens her dark room silently via pythonw.
+rem   - Run `mikasa.bat --setup` or `python setup.py` anytime for Control Deck.
 rem ==========================================================================
 
 set "PY="
@@ -35,52 +36,81 @@ if not defined PY (
     )
 )
 
-if not defined PY goto :needsetup
+if not defined PY goto :nopython
 
-if not defined PYW (
-    for %%V in (313 312 311 310 39) do (
-        if not defined PYW if exist "%LocalAppData%\Programs\Python\Python%%V\pythonw.exe" (
-            set "PYW=%LocalAppData%\Programs\Python\Python%%V\pythonw.exe"
-        )
-    )
-)
-if not defined PYW (
-    where pythonw >nul 2>nul && set "PYW=pythonw"
-)
-if not defined PYW set "PYW=%PY%"
+rem Explicit setup / menu flags open the interactive Control Deck
+if /I "%~1"=="--setup" goto :runsetup
+if /I "%~1"=="--menu"  goto :runsetup
+if /I "%~1"=="setup"   goto :runsetup
 
-if "%PY%"=="py -3" (
-    py -3 -c "import PyQt6, numpy, sounddevice, google.genai" >nul 2>nul
-) else (
-    "%PY%" -c "import PyQt6, numpy, sounddevice, google.genai" >nul 2>nul
-)
-if errorlevel 1 goto :needsetup
+rem Check the 4 required packages
+"%PY%" -c "import PyQt6, numpy, sounddevice; from google import genai" >nul 2>nul
+if errorlevel 1 goto :nopkgs
 
-if not exist "%~dp0config\api_keys.json" (
-    if "%GEMINI_API_KEY%"=="" if "%GOOGLE_API_KEY%"=="" goto :needkey
+rem Check that a Gemini API key is configured
+"%PY%" -c "import sys; sys.path.insert(0, 'core'); import live; raise SystemExit(0 if live.find_api_key() else 1)" >nul 2>nul
+if errorlevel 1 goto :nokey
+
+rem Everything is ready -> launch her dark room silently (no console behind her)
+if defined PYW (
+    start "" "%PYW%" "%~dp0core\app.py" %*
+    exit /b 0
+)
+for /f "delims=" %%W in ('"%PY%" -c "import sys, pathlib; p = pathlib.Path(sys.executable).with_name('pythonw.exe'); print(p if p.exists() else '')" 2^>nul') do set "PYW=%%W"
+if defined PYW (
+    start "" "%PYW%" "%~dp0core\app.py" %*
+    exit /b 0
 )
 
-if "%PYW%"=="py -3" (
-    start "" pyw -3 "%~dp0app.py"
-) else (
-    start "" "%PYW%" "%~dp0app.py"
+"%PY%" "%~dp0core\app.py" %*
+if errorlevel 1 (
+    echo.
+    echo   Mikasa stopped unexpectedly. Check config\mikasa-error.txt if needed.
+    pause
 )
 exit /b 0
 
-
-:needsetup
+:runsetup
+"%PY%" "%~dp0setup.py" --menu
 echo.
-echo   First-time setup abhi baaki hai (packages install nahi hue).
-echo   INSTALL.bat abhi chala raha hoon...
-echo.
-call "%~dp0INSTALL.bat"
+pause
 exit /b %ERRORLEVEL%
 
-
-:needkey
+:nopkgs
 echo.
-echo   Gemini API key abhi set nahi hai.
-echo   Setup Control Deck khol raha hoon taaki key paste kar sako...
+echo   First time here - setting up Mikasa's room for you...
+echo   (Fallback manual command: python -m pip install PyQt6 numpy sounddevice google-genai)
 echo.
-call "%~dp0INSTALL.bat" --menu
+"%PY%" "%~dp0setup.py"
+echo.
+pause
 exit /b %ERRORLEVEL%
+
+:nokey
+echo.
+echo   Almost ready - let's add your free Gemini API key...
+echo.
+"%PY%" "%~dp0setup.py" --menu
+echo.
+pause
+exit /b %ERRORLEVEL%
+
+:nopython
+echo.
+echo   ==================================================================
+echo     Python 3.9+ was not found on this Windows PC
+echo   ==================================================================
+echo.
+echo     1. Download Python 3.11 or 3.12 from:
+echo        https://www.python.org/downloads/
+echo.
+echo     2. IMPORTANT: Tick  [x] Add python.exe to PATH  at the bottom
+echo        of the installer, then click Install Now.
+echo.
+echo     3. Come back and double-click mikasa.bat again!
+echo.
+set /p "_OPEN=  Open python.org download page in your browser now? [Y/n]: "
+if /I not "%_OPEN%"=="n" start "" "https://www.python.org/downloads/"
+echo.
+pause
+exit /b 1

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """MIKASA — setup.py
 
-    Double-click INSTALL.bat, or:   python setup.py
+    Double-click mikasa.bat, or:   python setup.py
 
 WHAT THIS IS
     One file that turns a folder on somebody else's laptop into a working
@@ -42,7 +42,7 @@ import time
 from pathlib import Path
 
 ROOT   = Path(__file__).resolve().parent
-APP    = ROOT / "app.py"
+APP    = ROOT / "core" / "app.py"
 VENV   = ROOT / ".venv"
 REQ    = ROOT / "requirements.txt"
 KEYFILE = ROOT / "config" / "api_keys.json"
@@ -684,10 +684,10 @@ def inspect_env(ui: UI) -> dict:
 
     # the folder itself
     if not APP.exists():
-        raise SetupError("app.py nahi mila",
-                         f"Is folder me app.py nahi hai: {ROOT}",
+        raise SetupError("core/app.py nahi mila",
+                         f"Is folder me core/app.py nahi hai: {ROOT}",
                          "setup.py ko Mikasa ke folder ke andar hi chalana hai — "
-                         "zip poora extract karo, phir INSTALL.bat.")
+                         "zip poora extract karo, phir mikasa.bat par double-click karo.")
     ui.ok("Mikasa ke files yahin hain " + ui.s.grey(f"({ROOT})"))
 
     # folder writable?
@@ -960,16 +960,15 @@ def verify(ui: UI, py: Path, args) -> dict:
         ui.info(ui.s.grey("Windows: Settings → Sound → input device check karo."))
 
     # her own files
-    files = [("app.py", APP), ("prompt.txt", ROOT / "prompt.txt"),
+    files = [("core/app.py", APP), ("core/prompt.txt", ROOT / "core" / "prompt.txt"),
              ("assets/mikasa.ico", ROOT / "assets" / "mikasa.ico"),
-             ("assets/heart.png", ROOT / "assets" / "heart.png"),
-             ("config/", ROOT / "config")]
+             ("assets/heart.png", ROOT / "assets" / "heart.png")]
     bad_files = [n for n, p in files if not p.exists()]
     if bad_files:
         ui.bad("Ye files missing hain: " + ", ".join(bad_files))
         ui.info("Zip adhoora extract hua lagta hai. Dobara extract karo.")
     else:
-        ui.ok("Uske saare files jagah pe hain " + ui.s.grey("(5/5)"))
+        ui.ok("Uske saare files jagah pe hain " + ui.s.grey("(4/4)"))
 
     # her own test suite — this is the interesting part
     ui.out()
@@ -1146,6 +1145,7 @@ def test_voice_live(ui: UI, py: Path, key: str) -> None:
     code = r"""
 import sys, json
 from pathlib import Path
+sys.path.insert(0, str(Path.cwd() / "core"))
 import voice, sounddevice as sd, numpy as np
 k = sys.argv[1]
 m = voice.Voice(api_key=k, sink=lambda b: None, voice="Leda")
@@ -1223,7 +1223,7 @@ def ask_key(ui: UI, args, force_change: bool = False) -> str:
             ui.ok("Key PASTE-KEY-HERE.txt se le li: " + ui.s.white(_mask(k)))
             return k
         ui.bad("Yahan se type nahi kar sakta — ye ek asli console nahi hai.")
-        ui.info(ui.s.grey("INSTALL.bat par double-click karo, ya terminal me chalao."))
+        ui.info(ui.s.grey("mikasa.bat par double-click karo, ya terminal me python setup.py chalao."))
         ui.warn("Key ke bina aage badh raha hoon. Baad me daal sakte ho: " +
                 ui.s.grey("config/api_keys.json"))
         return ""
@@ -1284,7 +1284,7 @@ def ask_key(ui: UI, args, force_change: bool = False) -> str:
                               "save karke setup dobara chala do."))
 
     ui.out()
-    ui.warn("Key verify nahi ho paayi. Baad me INSTALL.bat chala ke [2] se kabhi bhi daal sakte ho.")
+    ui.warn("Key verify nahi ho paayi. Baad me app ke andar setup -> API KEY se ya python setup.py se kabhi bhi daal sakte ho.")
     return existing if force_change else ""
 
 
@@ -1300,14 +1300,14 @@ def desktop_icon(ui: UI, py: Path, args) -> None:
         ui.info("Theek hai. mikasa.bat se bhi khul jayegi.")
         return
     if os.name != "nt":
-        ui.info("Ye step Windows-only hai. Yahan se kholo: python app.py")
+        ui.info("Ye step Windows-only hai. Yahan se kholo: python core/app.py")
         return
     if args.dry_run:
         ui.ok("(dry run) shortcut ban jata.")
         return
-    script = ROOT / "make_shortcut.py"
+    script = ROOT / "core" / "make_shortcut.py"
     if not script.exists():
-        ui.warn("make_shortcut.py nahi mila. Shortcut skip.")
+        ui.warn("core/make_shortcut.py nahi mila. Shortcut skip.")
         return
     rc, out = run([str(py), str(script)], cwd=ROOT, timeout=90)
     if rc == 0:

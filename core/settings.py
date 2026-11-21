@@ -28,7 +28,7 @@ from pathlib import Path
 if getattr(sys, "frozen", False):
     ROOT = Path(sys.executable).parent
 else:
-    ROOT = Path(__file__).resolve().parent
+    ROOT = Path(__file__).resolve().parent.parent
 
 CONFIG_DIR = ROOT / "config"
 FILE       = CONFIG_DIR / "mikasa.json"

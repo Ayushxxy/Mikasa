@@ -26,6 +26,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "core"))
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -415,11 +416,11 @@ def _replay():
 
 @check("typing into a dead line says so, and the line can take it back")
 def _held():
-    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    app = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
     assert "_held_noted" in app, "no marker for held lines"
     assert "held until the line is back" in app, \
         "a typed line during an outage looks exactly like a delivered one"
-    live_src = (ROOT / "live.py").read_text(encoding="utf-8")
+    live_src = (ROOT / "core" / "live.py").read_text(encoding="utf-8")
     assert "def is_ready" in live_src, "the window cannot ask whether she can hear"
     assert "do not throw it away" in live_src, \
         "typed lines are dropped while the socket is down"
@@ -428,11 +429,11 @@ def _held():
 
 @check("the window says which, how many, how long — not just 'reconnecting'")
 def _states():
-    ui = (ROOT / "ui.py").read_text(encoding="utf-8")
+    ui = (ROOT / "core" / "ui.py").read_text(encoding="utf-8")
     for needle in ("offline", "try {attempt}", "backup", "NetLogDialog",
                    "THE LINE"):
         assert needle in ui, f"{needle!r} is missing from the window"
-    live_src = (ROOT / "live.py").read_text(encoding="utf-8")
+    live_src = (ROOT / "core" / "live.py").read_text(encoding="utf-8")
     assert "def _state" in live_src and '"offline"' in live_src
     assert "ROTATE_AFTER" in live_src, "no scheduled handover — the server will cut instead"
     assert "route_ok_async" in live_src, "no route probe: offline is a guess again"
@@ -442,7 +443,7 @@ def _states():
 
 @check("nothing short of closing the window can stop her")
 def _never_stops():
-    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    app = (ROOT / "core" / "app.py").read_text(encoding="utf-8")
 
     # the supervisor is a loop, not a single run
     assert 'while not getattr(self, "_closing"' in app, \

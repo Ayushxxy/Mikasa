@@ -26,13 +26,15 @@ import sys
 import time
 from pathlib import Path
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 import netwatch
 
 if getattr(sys, "frozen", False):
     ROOT = Path(sys.executable).parent
 else:
     ROOT = Path(sys.executable).parent if "__compiled__" in globals() \
-        else Path(__file__).resolve().parent
+        else Path(__file__).resolve().parent.parent
 
 # ── the ladder ───────────────────────────────────────────────────────────────
 #
@@ -85,7 +87,8 @@ def find_api_key() -> str:
     # Her own folder, full stop. She used to look inside ULTRON as a courtesy,
     # which is what made the two impossible to move or break separately.
     here = Path(__file__).resolve().parent
-    for candidate in (here / "config" / "api_keys.json",
+    for candidate in (ROOT / "config" / "api_keys.json",
+                      here / "config" / "api_keys.json",
                       here.parent / "config" / "api_keys.json"):
         try:
             data = json.loads(candidate.read_text(encoding="utf-8"))
@@ -150,7 +153,7 @@ class Session:
         # room still deserves the line.
         self.on_model = on_model or (lambda name, index: None)
         self.log = log if log is not None else netwatch.Line(
-            Path(__file__).resolve().parent / "config" / "netlog.json")
+            ROOT / "config" / "netlog.json")
         self.models = tuple(models or MODELS)
         self._model_idx = 0
 
@@ -453,6 +456,24 @@ class Session:
             self._loop.call_soon_threadsafe(_flip)
         except Exception:
             pass                        # loop closed: shutting down anyway
+        return True
+
+    def reconnect_now(self, reason: str = "key updated") -> bool:
+        """Planned 1-second handover (e.g. when the API key changes in Controls)."""
+        if not (self._running and self.session is not None and self._loop):
+            return True
+
+        def _flip() -> None:
+            self._planned = True
+            self._restart = True
+            if self._kill is None:
+                self._kill = (netwatch.PLANNED, reason)
+            asyncio.ensure_future(self._drop())
+
+        try:
+            self._loop.call_soon_threadsafe(_flip)
+        except Exception:
+            pass
         return True
 
     def is_ready(self) -> bool:
